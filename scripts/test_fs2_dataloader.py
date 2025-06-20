@@ -1,6 +1,6 @@
 from fairseq2.logging import get_log_writer
 from fairseq2.recipes.utils.setup import setup_gangs
-from utils.dataset import load_seamless_next_dataset
+from utils.fs2_dataset import load_seamless_next_dataset
 
 log = get_log_writer(__name__)
 

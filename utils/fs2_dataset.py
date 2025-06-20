@@ -33,11 +33,11 @@ from utils.constants import (
     JSONL_KEY_VISUAL_RATE,
 )
 from utils.dataloader_utils import (
-    collate_seamless_next_data_batch,
+    collate_seamless_communciation_data_batch,
     get_load_feature_fn,
     shuffle,
 )
-from utils.errors import ConfigurationError, SeamlessNextDatasetError
+from utils.errors import ConfigurationError, DatasetError
 from utils.validations import (
     validate_feature_duration_consistency,
     validate_feature_name,
@@ -56,12 +56,12 @@ class DataBatch:
         return len(next(iter(self.data.values())))
 
 
-class SeamlessNextDataset(ABC):
-    """Interface for SeamlessNext dataset classes"""
+class SeamlessCommunicationDataset(ABC):
+    """Interface for FS2 Seamless Communication dataset classes"""
 
     @classmethod
     @abstractmethod
-    def from_path(cls, path: Path) -> SeamlessNextDataset:
+    def from_path(cls, path: Path) -> SeamlessCommunicationDataset:
         """Load data from yaml file (We intend for each split (train, val, test) to have its own yaml file))
         This is the entrypoint that defines the inputs to the dataset
         Args:
@@ -81,7 +81,7 @@ class SeamlessNextDataset(ABC):
         mismatch_tolerance_seconds: float = DEFAULT_DURATION_MISMATCH_SECONDS_TOLERANCE,
         seed: int = DEFAULT_SEED,
     ) -> DataReader[DataBatch]:
-        """Create a dataloader for a SeamlessNext dataset."""
+        """Create a dataloader for a Seamless Communication dataset."""
 
     @abstractmethod
     def _load_sample(
@@ -94,7 +94,7 @@ class SeamlessNextDataset(ABC):
         """
 
 
-class GenericSeamlessNextDataset(SeamlessNextDataset):
+class GenericSeamlessCommunicationDataset(SeamlessCommunicationDataset):
     def __init__(
         self,
         jsonl_list: List[str],
@@ -104,7 +104,7 @@ class GenericSeamlessNextDataset(SeamlessNextDataset):
         transforms_kwargs: List[Dict[str, Any]],
         feature_dir_list: Optional[List[str]] = None,
     ):
-        """Supports base class for SeamlessNext dataset classes. In loads a list of jsonls and weights for each,
+        """Supports base class for Seamless Communication dataset classes. In loads a list of jsonls and weights for each,
         along with a list of requested features (raw audio, raw visual, smplh etc) and applies some transforms to the data
         Args:
             jsonl_list: List of jsonl files containing samples to load
@@ -192,7 +192,7 @@ class GenericSeamlessNextDataset(SeamlessNextDataset):
         log.info("[4/4] Collating batches...")
         dataset_builder.map(
             partial(
-                collate_seamless_next_data_batch,
+                collate_seamless_communication_data_batch,
                 gang=gang,
             ),
             num_parallel_calls=npc,
@@ -250,7 +250,7 @@ class GenericSeamlessNextDataset(SeamlessNextDataset):
             try:
                 transform_fns.append(partial(transform, **kwargs))
             except Exception as e:
-                raise SeamlessNextDatasetError(
+                raise DatasetError(
                     f"Failed to create partial function for transform {transform}: {e}"
                 )
         return transform_fns
@@ -315,8 +315,8 @@ class GenericSeamlessNextDataset(SeamlessNextDataset):
         return feature_data
 
 
-class GenericSeamlessNextMonadicDataset(GenericSeamlessNextDataset):
-    """SeamlessNext dataset class for monadic data (ie audio, visual, metadata etc)
+class GenericSeamlessCommunicationMonadicDataset(GenericSeamlessCommunicationDataset):
+    """Seamless Communication dataset class for monadic data (ie audio, visual, metadata etc)
     The input jsonl should contain a single id per line.
     """
 
@@ -340,7 +340,7 @@ class GenericSeamlessNextMonadicDataset(GenericSeamlessNextDataset):
 
     @classmethod
     @override
-    def from_path(cls, path: Path) -> GenericSeamlessNextMonadicDataset:
+    def from_path(cls, path: Path) -> GenericSeamlessCommunicationMonadicDataset:
         """Load data from yaml file (We intend for each split (train, val, test) to have its own yaml file))
         This is the entrypoint that defines the inputs to the dataset
 
@@ -351,7 +351,7 @@ class GenericSeamlessNextMonadicDataset(GenericSeamlessNextDataset):
             raise ValueError(f"Expected a yaml data file, found {str(path)}!")
         with path.open() as fp:
             content = yaml.safe_load(fp)
-        return GenericSeamlessNextMonadicDataset(
+        return GenericSeamlessCommunicationMonadicDataset(
             jsonl_list=content["jsonl_list"],
             jsonl_weights=content["jsonl_weights"],
             feature_list=content["feature_list"],
@@ -390,8 +390,8 @@ class GenericSeamlessNextMonadicDataset(GenericSeamlessNextDataset):
         }
 
 
-class GenericSeamlessNextDyadicDataset(GenericSeamlessNextDataset):
-    """SeamlessNext dataset class for dyadic data (ie audio, visual, metadata etc)
+class GenericSeamlessCommunicationDyadicDataset(GenericSeamlessCommunicationDataset):
+    """Seamless Communication dataset class for dyadic data (ie audio, visual, metadata etc)
     The input jsonl should contain a two ids per line.
     """
 
@@ -415,7 +415,7 @@ class GenericSeamlessNextDyadicDataset(GenericSeamlessNextDataset):
 
     @classmethod
     @override
-    def from_path(cls, path: Path) -> GenericSeamlessNextDyadicDataset:
+    def from_path(cls, path: Path) -> GenericSeamlessCommunicationDyadicDataset:
         """Load data from yaml file (We intend for each split (train, val, test) to have its own yaml file))
         This is the entrypoint that defines the inputs to the dataset
 
@@ -426,7 +426,7 @@ class GenericSeamlessNextDyadicDataset(GenericSeamlessNextDataset):
             raise ValueError(f"Expected a yaml data file, found {str(path)}!")
         with path.open() as fp:
             content = yaml.safe_load(fp)
-        return GenericSeamlessNextDyadicDataset(
+        return GenericSeamlessCommunicationDyadicDataset(
             jsonl_list=content["jsonl_list"],
             jsonl_weights=content["jsonl_weights"],
             feature_list=content["feature_list"],
@@ -488,13 +488,15 @@ class GenericSeamlessNextDyadicDataset(GenericSeamlessNextDataset):
 
 
 @final
-class GenericSeamlessNextMonadicDatasetLoader(
-    AbstractDatasetLoader[GenericSeamlessNextMonadicDataset]
+class GenericSeamlessCommunicationMonadicDatasetLoader(
+    AbstractDatasetLoader[GenericSeamlessCommunicationMonadicDataset]
 ):
     @override
-    def _load(self, path: Path, card: AssetCard) -> GenericSeamlessNextMonadicDataset:
+    def _load(
+        self, path: Path, card: AssetCard
+    ) -> GenericSeamlessCommunicationMonadicDataset:
         try:
-            return GenericSeamlessNextMonadicDataset.from_path(path=path)
+            return GenericSeamlessCommunicationMonadicDataset.from_path(path=path)
         except RuntimeError as ex:
             raise AssetError(
                 f"{card.name} cannot be loaded. See nested exception for details."
@@ -502,35 +504,42 @@ class GenericSeamlessNextMonadicDatasetLoader(
 
 
 @final
-class GenericSeamlessNextDyadicDatasetLoader(
-    AbstractDatasetLoader[GenericSeamlessNextDyadicDataset]
+class GenericSeamlessCommunicationDyadicDatasetLoader(
+    AbstractDatasetLoader[GenericSeamlessCommunicationDyadicDataset]
 ):
     @override
-    def _load(self, path: Path, card: AssetCard) -> GenericSeamlessNextDyadicDataset:
+    def _load(
+        self, path: Path, card: AssetCard
+    ) -> GenericSeamlessCommunicationDyadicDataset:
         try:
-            return GenericSeamlessNextDyadicDataset.from_path(path=path)
+            return GenericSeamlessCommunicationDyadicDataset.from_path(path=path)
         except RuntimeError as ex:
             raise AssetError(
                 f"{card.name} cannot be loaded. See nested exception for details."
             ) from ex
 
 
-load_seamless_next_monadic_dataset = DelegatingDatasetLoader[
-    GenericSeamlessNextMonadicDataset
+load_seamless_communication_monadic_dataset = DelegatingDatasetLoader[
+    GenericSeamlessCommunicationMonadicDataset
 ]()
 
-load_generic_seamless_next_monadic_dataset = GenericSeamlessNextMonadicDatasetLoader()
-
-load_seamless_next_monadic_dataset.register(
-    "generic_seamless_next_monadic", load_generic_seamless_next_monadic_dataset
+load_generic_seamless_communication_monadic_dataset = (
+    GenericSeamlessCommunicationMonadicDatasetLoader()
 )
 
-load_seamless_next_dyadic_dataset = DelegatingDatasetLoader[
-    GenericSeamlessNextDyadicDataset
+load_seamless_communication_monadic_dataset.register(
+    "generic_seamless_communication_monadic",
+    load_seamless_communication_monadic_dataset,
+)
+
+load_seamless_communication_dyadic_dataset = DelegatingDatasetLoader[
+    GenericSeamlessCommunicationDyadicDataset
 ]()
 
-load_generic_seamless_next_dyadic_dataset = GenericSeamlessNextDyadicDatasetLoader()
+load_generic_seamless_communication_dyadic_dataset = (
+    GenericSeamlessCommunicationDyadicDatasetLoader()
+)
 
-load_seamless_next_dyadic_dataset.register(
-    "generic_seamless_next_dyadic", load_generic_seamless_next_dyadic_dataset
+load_seamless_communication_dyadic_dataset.register(
+    "generic_seamless_communication_dyadic", load_seamless_communication_dyadic_dataset
 )

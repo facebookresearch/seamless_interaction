@@ -3,8 +3,8 @@
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
-"""This file contains the collate function for the SeamlessNext dataset, as well as utils to
-load and validate features from files in the SeamlessNext dataset format.
+"""This file contains the collate function for the Seamless Communication dataset, as well as utils to
+load and validate features from files in the Seamless Communication dataset format.
 """
 from typing import Any, Dict, List, Tuple
 
@@ -51,11 +51,11 @@ def _tensorize_batch(batch: Dict[str, Any], gang: Gang) -> DataBatch:
     return DataBatch(batch)
 
 
-def collate_seamless_next_data_batch(
+def collate_seamless_communication_data_batch(
     batch_samples: List[Dict[str, Any]],
     gang: Gang,
 ) -> DataBatch:
-    """Collate a batch of data from a SeamlessNext dataset"""
+    """Collate a batch of data from a Seamless Communication dataset"""
     batch: dict[str, Any] = {}
 
     # Flatten the batch into {feature: [values]}
