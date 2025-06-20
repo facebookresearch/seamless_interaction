@@ -12,35 +12,45 @@ DURATION_TAG: Final[str] = "duration"
 WAV_TAG: Final[str] = "wav"
 SR_TAG: Final[str] = "sr"
 FILELIST: Final[str] = "filelist"
+SAMPLE_ID: Final[str] = "sample_id"
+AUDIOVISUAL_SECOND_PADDING: float = 0.4
 
 # Feature identifiers (in jsonl)
 JSONL_KEY_ID: Final[str] = "id"
 JSONL_KEY_VISUAL_RATE: Final[str] = "visual_rate"
-JSONL_KEY_SPEECH_TOKEN_RATE: Final[str] = "speech_token_rate"
-JSONL_KEY_VERSION: Final[str] = "version"
 
 # Feature identifiers (in dyadic jsonl)
 DYADIC_JSONL_KEY_ID_0: Final[str] = "id_0"
 DYADIC_JSONL_KEY_ID_1: Final[str] = "id_1"
-DYADIC_L4_TOKEN_KEY = "speech_tokens_l4_tokens"
 DYADIC_VAD = "metadata_vad"
-DYADIC_TEXT = "metadata_text"
+DYADIC_TRANSCRIPT = "metadata_transcript"
 
 # Feature types
 FEATURE_COLLECTION_AUDIO: Final[str] = "audio"
 FEATURE_COLLECTION_METADATA: Final[str] = "metadata"
-FEATURE_COLLECTION_SMIRK: Final[str] = "smirk"
 FEATURE_COLLECTION_SMPLH: Final[str] = "smplh"
 FEATURE_COLLECTION_MOVEMENT: Final[str] = "movement"
-FEATURE_COLLECTION_SPEECH_TOKENS: Final[str] = "speech_tokens"
 FEATURE_COLLECTION_BOXES_AND_KEYPOINTS: Final[str] = "boxes_and_keypoints"
+FEATURE_COLLECTION_ANNOTATIONS: Final[str] = "annotations"
 VALID_COLLECTIONS = {
     FEATURE_COLLECTION_AUDIO,
     FEATURE_COLLECTION_METADATA,
-    FEATURE_COLLECTION_SMIRK,
     FEATURE_COLLECTION_SMPLH,
     FEATURE_COLLECTION_MOVEMENT,
-    FEATURE_COLLECTION_SPEECH_TOKENS,
+    FEATURE_COLLECTION_ANNOTATIONS,
+}
+
+ANNOTATIONS_3PV: Final[str] = "3P-V"
+ANNOTATIONS_3PIS: Final[str] = "3P-IS"
+ANNOTATIONS_3PR: Final[str] = "3P-R"
+ANNOTATIONS_1PIS: Final[str] = "1P-IS"
+ANNOTATIONS_1PR: Final[str] = "1P-R"
+VALID_ANNOTATION_FEATURES: Final[Set[str]] = {
+    ANNOTATIONS_3PV,
+    ANNOTATIONS_3PIS,
+    ANNOTATIONS_3PR,
+    ANNOTATIONS_1PIS,
+    ANNOTATIONS_1PR,
 }
 
 # Labels for SMPL-H features (h5py subkeys)
@@ -59,22 +69,11 @@ VALID_SMPLH_FEATURES: Final[Set[str]] = {
     SMPLH_IS_VALID,
 }
 
-# Labels for SMIRK features (h5py subkeys)
-SMIRK_EXPRESSION_PARAMS: Final[str] = "expression_params"
-SMIRK_EYELID_PARAMS: Final[str] = "eyelid_params"
-SMIRK_JAW_PARAMS: Final[str] = "jaw_params"
-SMIRK_SHAPE_PARAMS: Final[str] = "shape_params"
-SMIRK_POSE_PARAMS: Final[str] = "pose_params"
-SMIRK_CAM: Final[str] = "cam"
-SMIRK_IS_VALID: Final[str] = "is_valid_face"
-VALID_SMIRK_FEATURES: Final[Set[str]] = {
-    SMIRK_EXPRESSION_PARAMS,
-    SMIRK_EYELID_PARAMS,
-    SMIRK_JAW_PARAMS,
-    SMIRK_SHAPE_PARAMS,
-    SMIRK_POSE_PARAMS,
-    SMIRK_CAM,
-    SMIRK_IS_VALID,
+BOXES_AND_KEYPOINTS_BOXES: Final[str] = "boxes"
+BOXES_AND_KEYPOINTS_KEYPOINTS: Final[str] = "keypoints"
+VALID_BOXES_AND_KEYPOINTS_FEATURES: Final[Set[str]] = {
+    BOXES_AND_KEYPOINTS_BOXES,
+    BOXES_AND_KEYPOINTS_KEYPOINTS,
 }
 
 # Labels for movement features
@@ -120,31 +119,14 @@ VALID_AUDIO_FEATURES: Final[Set[str]] = {
     AUDIO_WAV_TENSOR,
 }
 
-# Valid speech token features
-SPEECH_TOKENS_L4: Final[str] = "l4_tokens"
-VALID_SPEECH_TOKENS_FEATURES: Final[Set[str]] = {
-    SPEECH_TOKENS_L4,
-}
-L4_TOKEN_RATE = 12.5
-
 # Metadata
 METADATA_VAD: Final[str] = "vad"
-VAD_START_KEY: Final[str] = "start"
-VAD_END_KEY: Final[str] = "end"
-META_START_KEY: Final[str] = "start_ts"
-META_END_KEY: Final[str] = "end_ts"
-START_TIME: Final[str] = "start_time"
-END_TIME: Final[str] = "end_time"
+METADATA_TRANSCRIPT: Final[str] = "transcript"
+METADATA_TRANSCRIPT_WORDS_KEY: Final[str] = "words"
 
 # Feature Lists
 VISUAL_FEATURES: List[str] = [
-    FEATURE_COLLECTION_SMIRK,
     FEATURE_COLLECTION_SMPLH,
     FEATURE_COLLECTION_BOXES_AND_KEYPOINTS,
 ]
-SPEECH_TOKEN_FEATURES: List[str] = [FEATURE_COLLECTION_SPEECH_TOKENS]
 AUDIO_FEATURES: List[str] = [FEATURE_COLLECTION_AUDIO]
-SAMPLE_ID: Final[str] = "sample_id"
-AUDIOVISUAL_SECOND_PADDING: float = 0.4
-METADATA_TEXT: Final[str] = "text"
-METADATA_WORDS_KEY: Final[str] = "words"
