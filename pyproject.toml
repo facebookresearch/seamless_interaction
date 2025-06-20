@@ -1,0 +1,15 @@
+[project]
+name = "seamless-interaction"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "datasets>=3.6.0",
+    "fairseq2==0.4.5",
+    "numpy==1.23",
+    "pillow>=11.2.1",
+    "pylance>=0.29.0",
+    "torch==2.6.0",
+    "torchaudio==2.6.0",
+]

@@ -1,0 +1,27 @@
+# Build Artifacts
+build/
+
+# Core Dumps
+core
+core.*
+
+# Byte-Compiled Modules
+__pycache__/
+
+# Extension Modules
+*.so
+
+# Packaging Artifacts
+*.egg-info
+*.whl
+
+# IDEs and Tools
+.idea/
+.gdb_history
+
+# Other
+.DS_Store
+
+# venv
+venv/
+.venv/
