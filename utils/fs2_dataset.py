@@ -32,12 +32,9 @@ from utils.constants import (
     JSONL_KEY_ID,
     JSONL_KEY_VISUAL_RATE,
 )
-from utils.dataloader_utils import (
-    collate_seamless_communciation_data_batch,
-    get_load_feature_fn,
-    shuffle,
-)
+from utils.dataloader_utils import collate_seamless_communciation_data_batch, shuffle
 from utils.errors import ConfigurationError, DatasetError
+from utils.load_feature_utils import get_load_feature_fn
 from utils.validations import (
     validate_feature_duration_consistency,
     validate_feature_name,
