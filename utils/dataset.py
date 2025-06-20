@@ -22,9 +22,7 @@ from fairseq2.gang import Gang
 from fairseq2.logging import get_log_writer
 from fairseq2.typing import override
 
-from seamless_next.datasets import transforms as transforms
-from seamless_next.datasets._batch import DataBatch
-from seamless_next.datasets.constants import (
+from utils.constants import (
     DEFAULT_BATCH_SIZE,
     DEFAULT_DURATION_MISMATCH_SECONDS_TOLERANCE,
     DEFAULT_NUM_PARALLEL_CALLS,
@@ -32,24 +30,30 @@ from seamless_next.datasets.constants import (
     DYADIC_JSONL_KEY_ID_0,
     DYADIC_JSONL_KEY_ID_1,
     JSONL_KEY_ID,
-    JSONL_KEY_SPEECH_TOKEN_RATE,
     JSONL_KEY_VISUAL_RATE,
 )
-from seamless_next.datasets.dataloader_utils import (
+from utils.dataloader_utils import (
     collate_seamless_next_data_batch,
+    get_load_feature_fn,
     shuffle,
 )
-from seamless_next.datasets.dataset_errors import (
-    ConfigurationError,
-    SeamlessNextDatasetError,
-)
-from seamless_next.datasets.dataset_load_feature_utils import get_load_feature_fn
-from seamless_next.datasets.dataset_validations import (
+from utils.errors import ConfigurationError, SeamlessNextDatasetError
+from utils.validations import (
     validate_feature_duration_consistency,
     validate_feature_name,
 )
 
 log = get_log_writer(__name__)
+
+
+@dataclass
+class DataBatch:
+    data: Dict[str, Any]
+
+    @property
+    def batch_size(self) -> int:
+        """The size of the batch dimension."""
+        return len(next(iter(self.data.values())))
 
 
 class SeamlessNextDataset(ABC):

@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torchaudio
 
-from seamless_next.datasets.constants import (
+from utils.constants import (
     AUDIO_WAV_TENSOR,
     BOXES_AND_KEYPOINTS_BOXES,
     BOXES_AND_KEYPOINTS_KEYPOINTS,
@@ -57,7 +57,7 @@ from seamless_next.datasets.constants import (
     SR_TAG,
     WAV_TAG,
 )
-from seamless_next.datasets.dataset_errors import ConfigurationError, DatasetError
+from utils.dataset_errors import ConfigurationError, DatasetError
 
 
 def _tensorize_visual_feat(feature: np.ndarray[Any, Any]) -> torch.Tensor:
@@ -328,13 +328,13 @@ def load_metadata_file(
 
 
 def load_audio_file(
-    basepath: Path, filename: str, features: Set[str]
+    features: Set[str], basepath: Path, filename: str
 ) -> Dict[str, Any]:
     """Load a wav file and return a dict
     Args:
+        features: Set of audio features to load
         basepath: Path to the wav file
         filename: Filename of the wav file
-        features: Set of audio features to load
     """
     audio_features: Dict[str, Any] = {}
     wav, sr = torchaudio.load(f"{basepath}/{filename}.wav")

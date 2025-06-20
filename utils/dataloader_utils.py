@@ -10,15 +10,10 @@ from typing import Any, Dict, List, Tuple
 
 import torch
 from fairseq2.gang import Gang
-from seamless_next.datasets._batch import DataBatch
-from seamless_next.datasets.constants import (
-    FEATURE_COLLECTION_ANNOTATIONS,
-    FEATURE_COLLECTION_METADATA,
-)
+from utils.constants import FEATURE_COLLECTION_ANNOTATIONS, FEATURE_COLLECTION_METADATA
+from utils.dataloader import DataBatch
 
-from seamless_next.datasets.dataset_validations import (
-    validate_batch_feature_rate_consistency,
-)
+from utils.validations import validate_batch_feature_rate_consistency
 
 
 def shuffle(seed: int, window: int, builder: Any) -> Tuple[int, Any]:

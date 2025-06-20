@@ -1,0 +1,11 @@
+jsonl_list:
+  - "/path/to/train.jsonl"
+jsonl_weights:
+  - 1.0
+feature_list:
+  - "smplh:body_pose"
+  - "movement:FAUToken"
+  - "annotation:3P-V"
+  - "audio:waveform"
+  - "boxes_and_keypoints:keypoints"
+  - "metadata:transcripts"
