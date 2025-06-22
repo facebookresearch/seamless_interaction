@@ -13,7 +13,7 @@ import tqdm
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("upload.log"), logging.StreamHandler()],
+    handlers=[logging.FileHandler("s3fs.log"), logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
 
@@ -323,7 +323,7 @@ class SeamlessInteractionS3FS:
                 for file_id in pbar:
                     paths = self.get_path_list_for_file_id(file_id)
                     for path in paths:
-                        local_path = os.path.join(local_dir, os.path.basename(path))
+                        local_path = os.path.join(local_dir, path.replace(f"{self._bucket}/{self._prefix}/", ""))
                         if not overwrite and os.path.exists(local_path):
                             logger.info(f"Skipping {local_path} as it already exists.")
                             continue
@@ -333,7 +333,7 @@ class SeamlessInteractionS3FS:
                             )
                             continue
                         logger.info(f"Downloading {path} to {local_path}")
-                        self._fs.get_file(path, local_path)
+                        self._fs.get(path, local_path)
                     _total_files += len(paths)
             logger.info(f"Downloaded the {_total_files} files")
             return True
