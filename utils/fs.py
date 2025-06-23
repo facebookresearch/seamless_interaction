@@ -4,6 +4,7 @@ import re
 from collections import defaultdict
 from typing import Final, Literal
 from functools import cache
+import glob
 
 import fsspec
 import pandas as pd
@@ -113,7 +114,7 @@ class SeamlessInteractionFS:
     # s3
     _bucket: str = "fairusersglobal"
     _prefix: str = "tmp/seamless/MOSAIC"
-    _s3fs: s3fs
+    _s3fs: type(s3fs) | None = None
     # hf
     _hf_api: HfApi = HfApi()
     _hf_repo_id: str = "facebook/seamless_interaction"
@@ -136,6 +137,7 @@ class SeamlessInteractionFS:
         hf_repo_id: str | None = None,
         hf_repo_type: Literal["dataset", "model"] = "dataset",
         dry_run: bool = False,
+        skip_s3: bool = False,
     ) -> None:
         if bucket:
             self._bucket = bucket
@@ -146,12 +148,13 @@ class SeamlessInteractionFS:
         if hf_repo_id:
             self._hf_repo_id = hf_repo_id
         self._hf_repo_type = hf_repo_type
-        self._s3fs = fsspec.filesystem(
-            "s3",
-            anon=False,
-            default_block_size=10_000_000,
-            config_kwargs={"max_pool_connections": 50},
-        )
+        if not skip_s3:
+            self._s3fs = fsspec.filesystem(
+                "s3",
+                anon=False,
+                default_block_size=10_000_000,
+                config_kwargs={"max_pool_connections": 50},
+            )
         self._dry_run = dry_run
         os.makedirs(self._local_dir, exist_ok=True)
         self._ckpt_file = ckpt_file or self._ckpt_file
@@ -287,7 +290,7 @@ class SeamlessInteractionFS:
         })
         return _res
 
-    def get_path_list_for_file_id(self, file_id: str) -> list[str]:
+    def get_path_list_for_file_id(self, file_id: str, local: bool = True) -> list[str]:
         """
         Get the suffix for a given file ID based on its type.
         """
@@ -297,46 +300,88 @@ class SeamlessInteractionFS:
         if label not in ALL_LABELS or split not in ALL_SPLITS:
             raise ValueError(f"Invalid label '{label}' or split '{split}'.")
 
-        path_list = [
-            # audio
-            f"{self._bucket}/{self._prefix}/{label}/{split}/audio/{file_id}.wav",
-            # video
-            f"{self._bucket}/{self._prefix}/{label}/{split}/video/{file_id}.mp4",
-        ]
-        for feature, subfeatures in ALL_FEATURES.items():
-            if feature == "annotations":
-                # Annotations are JSON files, we need to try glob it
-                path_list.extend(
-                    self._s3fs.glob(
-                        f"{self._bucket}/{self._prefix}/{label}/{split}/annotations/**/{file_id}*"
-                    )
-                )
-            elif feature == "metadata":
-                # Metadata is a JSON file, we need to try glob in transcript which is optional
-                path_list.extend(
-                    self._s3fs.glob(
-                        f"{self._bucket}/{self._prefix}/{label}/{split}/metadata/transcript/{file_id}*"
-                    )
-                )
-                path_list.append(
-                    f"{self._bucket}/{self._prefix}/{label}/{split}/metadata/vad/{file_id}.jsonl"
-                )
-            else:
-                # For other features, we assume they are numpy files
-                if feature == "movement" and not self._s3fs.exists(
-                    f"{self._bucket}/{self._prefix}/{label}/{split}/movement/FAUToken/{file_id}.npy"
-                ):
-                    # skip movement if it doesn't exist
-                    continue
-                if subfeatures:
-                    for subfeature in subfeatures:
-                        path_list.append(
-                            f"{self._bucket}/{self._prefix}/{label}/{split}/{feature}/{subfeature}/{file_id}.npy"
+        if local:
+            path_list = [
+                # audio
+                f"{self._local_dir}/{label}/{split}/audio/{file_id}.wav",
+                # video
+                f"{self._local_dir}/{label}/{split}/video/{file_id}.mp4",
+            ]
+            for feature, subfeatures in ALL_FEATURES.items():
+                if feature == "annotations":
+                    # Annotations are JSON files, we need to try glob it
+                    path_list.extend(
+                        glob.glob(
+                            f"{self._local_dir}/{label}/{split}/annotations/**/{file_id}*"
                         )
-                else:
-                    path_list.append(
-                        f"{self._bucket}/{self._prefix}/{label}/{split}/{feature}/{file_id}.npy"
                     )
+                elif feature == "metadata":
+                    # Metadata is a JSON file, we need to try glob in transcript which is optional
+                    path_list.extend(
+                        glob.glob(
+                            f"{self._local_dir}/{label}/{split}/metadata/transcript/{file_id}*"
+                        )
+                    )
+                    path_list.append(
+                        f"{self._local_dir}/{label}/{split}/metadata/vad/{file_id}.jsonl"
+                    )
+                else:
+                    # For other features, we assume they are numpy files
+                    if feature == "movement" and not os.path.exists(
+                        f"{self._local_dir}/{label}/{split}/movement/FAUToken/{file_id}.npy"
+                    ):
+                        # skip movement if it doesn't exist
+                        continue
+                    if subfeatures:
+                        for subfeature in subfeatures:
+                            path_list.append(
+                                f"{self._local_dir}/{label}/{split}/{feature}/{subfeature}/{file_id}.npy"
+                            )
+                    else:
+                        path_list.append(
+                            f"{self._local}/{label}/{split}/{feature}/{file_id}.npy"
+                        )
+        else:
+            path_list = [
+                # audio
+                f"{self._bucket}/{self._prefix}/{label}/{split}/audio/{file_id}.wav",
+                # video
+                f"{self._bucket}/{self._prefix}/{label}/{split}/video/{file_id}.mp4",
+            ]
+            for feature, subfeatures in ALL_FEATURES.items():
+                if feature == "annotations":
+                    # Annotations are JSON files, we need to try glob it
+                    path_list.extend(
+                        self._s3fs.glob(
+                            f"{self._bucket}/{self._prefix}/{label}/{split}/annotations/**/{file_id}*"
+                        )
+                    )
+                elif feature == "metadata":
+                    # Metadata is a JSON file, we need to try glob in transcript which is optional
+                    path_list.extend(
+                        self._s3fs.glob(
+                            f"{self._bucket}/{self._prefix}/{label}/{split}/metadata/transcript/{file_id}*"
+                        )
+                    )
+                    path_list.append(
+                        f"{self._bucket}/{self._prefix}/{label}/{split}/metadata/vad/{file_id}.jsonl"
+                    )
+                else:
+                    # For other features, we assume they are numpy files
+                    if feature == "movement" and not self._s3fs.exists(
+                        f"{self._bucket}/{self._prefix}/{label}/{split}/movement/FAUToken/{file_id}.npy"
+                    ):
+                        # skip movement if it doesn't exist
+                        continue
+                    if subfeatures:
+                        for subfeature in subfeatures:
+                            path_list.append(
+                                f"{self._bucket}/{self._prefix}/{label}/{split}/{feature}/{subfeature}/{file_id}.npy"
+                            )
+                    else:
+                        path_list.append(
+                            f"{self._bucket}/{self._prefix}/{label}/{split}/{feature}/{file_id}.npy"
+                        )
         return path_list
 
     def download_batch(
