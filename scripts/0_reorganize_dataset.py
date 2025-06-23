@@ -84,20 +84,39 @@ def handle_sigint(signum, frame):
     logger.info("Received interrupt signal. Exiting gracefully...")
     sys.exit(1)
 
-def gather_file(fs: SeamlessInteractionFS, file_id: str, batch_idx: int, target_dir: str) -> None:
-    files = fs.get_path_list_for_file_id(file_id)
+
+def recursively_cast_to_float32(data):
+    if isinstance(data, np.ndarray):
+        if data.dtype == np.float64:
+            return data.astype(np.float32)
+        else:
+            return data
+    elif isinstance(data, list):
+        return [recursively_cast_to_float32(item) for item in data]
+    elif isinstance(data, dict):
+        return {k: recursively_cast_to_float32(v) for k, v in data.items()}
+    else:
+        return data  # Keep other types unchanged
+
+
+def gather_file(fs: SeamlessInteractionFS, file_id: str, batch_idx: int, target_dir: str, local: bool = True) -> None:
+    files = fs.get_path_list_for_file_id(file_id, local=local)
     label, split = fs._cached_file_id_to_label_split[file_id]
     target_path = os.path.join(target_dir, f"{label}-{split}-{batch_idx:04d}")
     os.makedirs(target_path, exist_ok=True)
     np_data = {}
     json_data = {"id": file_id}
     for f in files:
-        local_path = os.path.join(fs._local_dir, f.split(fs._prefix)[-1].strip("/"))
+        if not local:
+            local_path = os.path.join(fs._local_dir, f.split(fs._prefix)[-1].strip("/"))
+        else:
+            local_path = f
         
         if f.endswith(".npy"):
             feature = ":".join(f.split("/")[-3:-1])
-            np_data[feature] = np.load(local_path, allow_pickle=True)
-            
+            loaded = np.load(local_path, allow_pickle=True)
+            np_data[feature] = recursively_cast_to_float32(loaded)
+
         elif f.endswith(".jsonl"):
             feature = ":".join(f.split("/")[-3:-1])
             with open(local_path, "r") as f_json:
@@ -111,19 +130,24 @@ def gather_file(fs: SeamlessInteractionFS, file_id: str, batch_idx: int, target_
                     annotation.append(json.loads(line))
             json_data[feature] = annotation
         elif f.endswith(".wav"):
-            shutil.move(local_path, f"{target_path}/{file_id}.wav")
+            if os.path.exists(local_path):
+                shutil.move(local_path, f"{target_path}/{file_id}.wav")
         elif f.endswith(".mp4"):
-            shutil.move(local_path, f"{target_path}/{file_id}.mp4")
+            if os.path.exists(local_path):
+                shutil.move(local_path, f"{target_path}/{file_id}.mp4")
     json.dump(json_data, open(f"{target_path}/{file_id}.json", "w"), indent=4)
+    # reorder the np_data to ensure consistent order
+    np_data = {k: np_data[k] for k in sorted(np_data.keys())}
+    # Save the numpy data as .npz file
     np.savez(f"{target_path}/{file_id}.npz", **np_data)
 
 
-def process_batch(batch_idx: int, batch: list[str], fs: SeamlessInteractionFS, target_dir: str) -> list[str]:
+def process_batch(batch_idx: int, batch: list[str], fs: SeamlessInteractionFS, target_dir: str, batch_start: int = 0) -> list[str]:
     """Process a batch of files"""
     logger.info(f"Processing batch {batch_idx + 1} with {len(batch)} files")
     processed_files = []
     
-    for file_id in tqdm(batch, desc=f"Processing batch {batch_idx + 1}", leave=False):
+    for file_id in tqdm(batch, desc=f"Processing batch {batch_idx + 1}", leave=False, position=batch_idx - batch_start):
         try:
             gather_file(fs, file_id, batch_idx=batch_idx, target_dir=target_dir)
             processed_files.append(file_id)
@@ -178,7 +202,7 @@ def main():
     completed_files = load_checkpoint(ckpt_file) if args.continuation else []
     logger.info(f"Loaded {len(completed_files)} completed files from checkpoint")
     
-    fs = SeamlessInteractionFS()
+    fs = SeamlessInteractionFS(skip_s3=True)
     all_files = fs._fetch_filelist(label=label, split=split)
     
     # Filter out already processed files if continuing from checkpoint
@@ -203,6 +227,7 @@ def main():
                 process_batch,
                 fs=fs,
                 target_dir=target_dir,
+                batch_start=batch_start,
             )
             
             for i, batch_result in enumerate(
