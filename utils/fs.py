@@ -308,7 +308,7 @@ class SeamlessInteractionFS:
                 # Annotations are JSON files, we need to try glob it
                 path_list.extend(
                     self._s3fs.glob(
-                        f"{self._bucket}/{self._prefix}/{label}/{split}/annotations/{file_id}*"
+                        f"{self._bucket}/{self._prefix}/{label}/{split}/annotations/**/{file_id}*"
                     )
                 )
             elif feature == "metadata":
