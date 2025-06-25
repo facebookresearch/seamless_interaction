@@ -18,18 +18,24 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
+    "boto3>=1.38.27",
     "datasets>=3.6.0",
     "fairseq2==0.4.5",
     "fsspec>=2025.3.0",
     "jupyterlab>=4.4.3",
     "librosa>=0.11.0",
     "numpy==1.23",
+    "opencv-python>=4.7.0.72",
+    "pandas>=1.5.1",
+    "plotly>=6.1.2",
     "pylance>=0.29.0",
     "ruff>=0.12.0",
-    "s3fs>=2025.3.0",
+    "s3fs==0.4.2",
+    "streamlit>=1.46.0",
     "torch==2.6.0",
     "torchaudio==2.6.0",
     "webdataset>=1.0.2",
+    "wget>=3.2",
 ]
 
 [project.urls]
