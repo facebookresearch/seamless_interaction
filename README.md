@@ -6,7 +6,8 @@
 
 **A large-scale multimodal dataset of 4,000+ hours of human interactions for AI research**
 
-[📄 Paper](#citation) | [🤗 HuggingFace](https://huggingface.co/datasets/seamless/interaction) | [🎮 Demo](https://seamless-interaction.github.io/demo) | [📊 Benchmarks](#benchmarks) | [📚 Documentation](https://seamless-interaction.github.io/docs)
+## Links
+[🖼️ Blog](https://ai.meta.com/blog/seamless-interaction-dataset-natural-conversation-dynamics) | [🌐 Website](https://ai.meta.com/research/seamless-interaction/) | [🎮 Demo](https://www.aidemos.meta.com/seamless_interaction_dataset) | [🤗 HuggingFace](https://huggingface.co/datasets/facebook/seamless-interaction) | [📄 Paper](#citation)
 
 </div>
 
@@ -30,12 +31,10 @@ The **Seamless Interaction Dataset** is a large-scale collection of over 4,000 h
 ```bash
 git clone https://github.com/facebookresearch/seamless-interaction
 cd seamless-interaction
+pip install -e .
 
 # if you use uv
 uv sync
-
-# Or install the development version
-pip install -e .
 ```
 
 ### Download Options
