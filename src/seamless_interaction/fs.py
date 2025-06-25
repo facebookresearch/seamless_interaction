@@ -23,15 +23,14 @@ import numpy as np
 import pandas as pd
 import wget
 from huggingface_hub import HfApi, HfFileSystem, hf_hub_download
-from tqdm import tqdm
-
 from seamless_interaction.constants import (
+    ALL_FEATURES,
     ALL_LABELS,
     ALL_SPLITS,
-    ALL_FEATURES,
     FILE_ID_REGEX,
 )
-from seamless_interaction.utils import setup_logging, recursively_cast_to_float32
+from seamless_interaction.utils import recursively_cast_to_float32, setup_logging
+from tqdm import tqdm
 
 logger = setup_logging(__name__)
 
@@ -117,6 +116,7 @@ class SeamlessInteractionFS:
     # local
     _local_dir: str = Path.home() / "datasets/seamless_interaction"  # YMMV
     _ckpt_file: str = "filelists_checkpoint.text"
+    _filelist_path: str = Path(__file__).parent.parent.parent / "assets/metadata.csv"
     _cached_filelist: pd.DataFrame = None
     _cached_file_id_to_label_split: dict = {}
     _cached_batches: dict = {}  # Cache for batch listings
@@ -129,6 +129,7 @@ class SeamlessInteractionFS:
         *,
         local_dir: str | None = None,
         ckpt_file: str | None = None,
+        filelist_path: str | None = None,
         hf_repo_id: str | None = None,
         hf_repo_type: Literal["dataset", "model"] = "dataset",
         dry_run: bool = False,
@@ -147,6 +148,7 @@ class SeamlessInteractionFS:
             logger.error(f"Failed to create local directory {self._local_dir}: {e}")
             raise e
         self._ckpt_file = ckpt_file or self._ckpt_file
+        self._filelist_path = filelist_path or self._filelist_path
         self._load_checkpoint()
         # to populate the cached file list
         _ = self._fetch_filelist("improvised", "train")
@@ -184,8 +186,7 @@ class SeamlessInteractionFS:
             repo_root_dir = (
                 os.getcwd().split("seamless_interaction")[0] + "seamless_interaction"
             )
-            filelist_path = f"{repo_root_dir}/assets/metadata.csv"
-            df = pd.read_csv(filelist_path)
+            df = pd.read_csv(self._filelist_path)
             if df.empty:
                 raise ValueError(
                     f"No files found for label '{label}' and split '{split}'."
@@ -336,14 +337,14 @@ class SeamlessInteractionFS:
         # Save JSON data
         json_file_path = os.path.join(target_path, f"{file_id}.json")
         if os.path.exists(json_file_path):
-            shutil.rmtree(json_file_path)
+            os.remove(json_file_path)
         with open(json_file_path, "w") as f:
             json.dump(json_data, f, indent=4)
 
         # Reorder the np_data to ensure consistent order and save as .npz
         if np_data:
             sorted_np_data = {k: np_data[k] for k in sorted(np_data.keys())}
-            print(sorted_np_data)
+            # print(sorted_np_data)
             npz_file_path = os.path.join(target_path, f"{file_id}.npz")
             np.savez(npz_file_path, **sorted_np_data)
             logger.info(f"Saved {len(sorted_np_data)} numpy arrays to {npz_file_path}")

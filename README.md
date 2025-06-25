@@ -43,7 +43,7 @@
 ## Overview
 
 Human communication involves a complex interplay of verbal and nonverbal signals, essential for
-conveying meaning and achieving interpersonal goals. To develop socially intelligent AI technologies, it is crucial to build models that can both comprehend and generate dyadic behavioral dynamics. 
+conveying meaning and achieving interpersonal goals. To develop socially intelligent AI technologies, it is crucial to build models that can both comprehend and generate dyadic behavioral dynamics.
 
 The **Seamless Interaction Dataset** is a large-scale collection of over 4,000 hours of face-to-face interaction footage from more than 4,000 participants in diverse contexts. This dataset enables the development of AI technologies that understand dyadic embodied dynamics, unlocking breakthroughs in:
 
@@ -74,10 +74,13 @@ We provide two download methods optimized for different use cases:
 Perfect for exploring individual interactions or specific file IDs. Downloads from S3 and automatically converts to consistent format (.wav, .mp4, .npz, .json).
 
 ```python
-from utils.fs import SeamlessInteractionFS
+from seamless_interaction.fs import SeamlessInteractionFS
 
 # Initialize the filesystem interface
+## set default local_dir to $HOME/datasets/seamless_interaction
 fs = SeamlessInteractionFS()
+## or specify local_dir directly
+# fs = SeamlessInteractionFS(local_dir='path/to/dataset')
 
 # Download a specific interaction pair
 fs.gather_file_id_data_from_s3(
@@ -87,16 +90,16 @@ fs.gather_file_id_data_from_s3(
 
 # Files are organized as:
 # local_dir/improvised/train/0000/0005/V00_S0809_I00000582_P0947.wav
-# local_dir/improvised/train/0000/0005/V00_S0809_I00000582_P0947.mp4  
+# local_dir/improvised/train/0000/0005/V00_S0809_I00000582_P0947.mp4
 # local_dir/improvised/train/0000/0005/V00_S0809_I00000582_P0947.json
 # local_dir/improvised/train/0000/0005/V00_S0809_I00000582_P0947.npz
 ```
 
-#### 📦 **HuggingFace Download** - Batch exploration  
+#### 📦 **HuggingFace Download** - Batch exploration
 Ideal for downloading self-contained batches (~50GB each) for local exploration. Each batch contains complete interaction pairs.
 
 ```python
-from utils.fs import SeamlessInteractionFS
+from seamless_interaction.fs import SeamlessInteractionFS
 
 # Initialize the filesystem interface
 fs = SeamlessInteractionFS(num_workers=8)
@@ -104,7 +107,7 @@ fs = SeamlessInteractionFS(num_workers=8)
 # Download specific archives from a batch (recommended for laptops)
 fs.download_batch_from_hf(
     label="improvised",
-    split="dev", 
+    split="dev",
     batch_idx=0,
     archive_list=[0, 23],  # Download only specific archives
     num_workers=8  # Parallel download and extraction
@@ -113,7 +116,7 @@ fs.download_batch_from_hf(
 # Download entire batch (for larger workstations)
 fs.download_batch_from_hf(
     label="improvised",
-    split="train", 
+    split="train",
     batch_idx=0,
     num_workers=None  # auto-detect the number of workers
 )
@@ -125,7 +128,7 @@ fs.download_batch_from_hf(
 ```python
 from pathlib import Path
 from datasets import load_dataset
-from utils.fs import SeamlessInteractionFS
+from seamless_interaction.fs import SeamlessInteractionFS
 
 fs = SeamlessInteractionFS()
 
@@ -220,7 +223,7 @@ seamless_interaction
 │   │   │   ├── box/          # Bounding boxes for each participant
 │   │   │   ├── is_valid_box/ # Whether bounding boxes are valid
 │   │   │   └── keypoints/    # Detected facial/body keypoints
-│   │   ├── movement/         # Quantified movement features 
+│   │   ├── movement/         # Quantified movement features
 │   │   │   ├── emotion_arousal/           # Arousal measures
 │   │   │   ├── emotion_valence/           # Valence measures
 │   │   │   ├── emotion_scores/            # Emotion detection scores
@@ -262,7 +265,7 @@ Each file is named according to a consistent convention:
 
 Each interaction in the dataset includes:
 
-| Modality | Description | File Format | Sample Rate | 
+| Modality | Description | File Format | Sample Rate |
 |----------|-------------|-------------|-------------|
 | 🎥 Video | High-definition face-to-face footage | MP4 (H.264) | 30 FPS, 1080p |
 | 🎙️ Audio | Denoised audio with separate channels | WAV | 48kHz, 16-bit |
@@ -317,7 +320,7 @@ We provide two complementary download methods optimized for different research w
 
 #### When to Use S3 Download
 - **Qualitative analysis**: Examining specific interactions in detail
-- **Pair studies**: Analyzing conversational dynamics between participants  
+- **Pair studies**: Analyzing conversational dynamics between participants
 - **Feature exploration**: Understanding data structure before large downloads
 - **Development**: Testing code with minimal data
 
@@ -332,7 +335,7 @@ We provide two complementary download methods optimized for different research w
 ```python
 # Optimal settings for different systems
 fs_laptop = SeamlessInteractionFS(num_workers=4)      # Laptop/small workstation
-fs_workstation = SeamlessInteractionFS(num_workers=8) # High-end workstation  
+fs_workstation = SeamlessInteractionFS(num_workers=8) # High-end workstation
 fs_server = SeamlessInteractionFS(num_workers=16)     # Server/cluster node
 
 # Memory-efficient batch processing
@@ -349,7 +352,7 @@ The dataset is organized in self-contained batches for flexible exploration:
 | Split | Batches | Size per Batch | Total Size | Description |
 |-------|---------|----------------|------------|-------------|
 | **dev** | 5 | ~50GB | ~250GB | Development/validation set |
-| **test** | 10 | ~50GB | ~500GB | Hold-out test set |  
+| **test** | 10 | ~50GB | ~500GB | Hold-out test set |
 | **train** | 200+ | ~50GB | ~10TB+ | Full training data |
 
 #### Recommended Download Strategies
@@ -359,7 +362,7 @@ The dataset is organized in self-contained batches for flexible exploration:
 fs = SeamlessInteractionFS(num_workers=4)
 fs.download_batch_from_hf("improvised", "dev", 0, archive_list=[0, 1, 2])  # ~6GB
 
-# Strategy 2: Research Dataset (Workstation)  
+# Strategy 2: Research Dataset (Workstation)
 fs = SeamlessInteractionFS(num_workers=8)
 fs.download_batch_from_hf("improvised", "dev", 0)     # Full dev set ~50GB
 fs.download_batch_from_hf("naturalistic", "dev", 0)   # Both interaction types
@@ -415,7 +418,7 @@ We provide example scripts for common download scenarios:
 #### S3 Individual File Download
 ```python
 # scripts/download_s3.py
-from utils.fs import SeamlessInteractionFS
+from seamless_interaction.fs import SeamlessInteractionFS
 
 def main():
     fs = SeamlessInteractionFS()
@@ -426,17 +429,17 @@ if __name__ == "__main__":
     main()
 ```
 
-#### HuggingFace Batch Download  
+#### HuggingFace Batch Download
 ```python
 # scripts/download_hf.py
-from utils.fs import SeamlessInteractionFS
+from seamless_interaction.fs import SeamlessInteractionFS
 
 def main():
     fs = SeamlessInteractionFS()
     # Download selected archives from batch 0 with 10 parallel workers
     fs.download_batch_from_hf(
-        "improvised", "dev", 0, 
-        num_workers=10, 
+        "improvised", "dev", 0,
+        num_workers=10,
         archive_list=[0, 23]  # ~2GB for quick exploration
     )
 
@@ -447,7 +450,7 @@ if __name__ == "__main__":
 ### Advanced Usage Examples
 
 ```python
-from utils.fs import SeamlessInteractionFS
+from seamless_interaction.fs import SeamlessInteractionFS
 import numpy as np
 import json
 
@@ -477,7 +480,7 @@ for archive in archives[:3]:
 # Download with progress tracking
 fs.download_batch_from_hf(
     label="naturalistic",
-    split="dev", 
+    split="dev",
     batch_idx=1,
     num_workers=6
 )
@@ -491,10 +494,10 @@ def load_interaction_data(file_id):
     """Load all modalities for a given file ID."""
     import cv2
     import librosa
-    
+
     fs = SeamlessInteractionFS()
     paths = fs.get_path_list_for_file_id_local(file_id)
-    
+
     data = {}
     for path in paths:
         if path.endswith('.mp4'):
@@ -506,7 +509,7 @@ def load_interaction_data(file_id):
                 data['metadata'] = json.load(f)
         elif path.endswith('.npz'):
             data['features'] = np.load(path)
-    
+
     return data
 
 # Example usage
@@ -522,32 +525,32 @@ print(f"Emotion data shape: {interaction['features']['movement:emotion_scores'].
 def download_research_subset():
     """Download a research-friendly subset."""
     fs = SeamlessInteractionFS(num_workers=8)
-    
+
     # Download development sets for both categories (manageable size)
     fs.download_batch_from_hf("improvised", "dev", 0)
-    fs.download_batch_from_hf("naturalistic", "dev", 0) 
-    
+    fs.download_batch_from_hf("naturalistic", "dev", 0)
+
     # Download first few batches of training data
     for batch_idx in range(3):  # ~150GB total
         fs.download_batch_from_hf("improvised", "train", batch_idx)
 
 # Download specific interaction pairs for qualitative analysis
 def download_interaction_pairs():
-    """Download matching participant pairs.""" 
+    """Download matching participant pairs."""
     fs = SeamlessInteractionFS()
-    
+
     # Example: Download both participants from same interaction
     pair_ids = [
         "V00_S0809_I00000582_P0947",  # Participant A
-        "V00_S0809_I00000582_P0948",  # Participant B  
+        "V00_S0809_I00000582_P0948",  # Participant B
     ]
-    
+
     for file_id in pair_ids:
         fs.gather_file_id_data_from_s3(file_id, num_workers=4)
 ```
 
 Check out our additional examples for:
-- Basic data loading and visualization  
+- Basic data loading and visualization
 - Multimodal feature extraction
 - Cross-modal analysis techniques
 
