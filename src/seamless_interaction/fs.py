@@ -183,9 +183,6 @@ class SeamlessInteractionFS:
         Fetch the file list for the specified label and split.
         """
         if self._cached_filelist is None:
-            repo_root_dir = (
-                os.getcwd().split("seamless_interaction")[0] + "seamless_interaction"
-            )
             df = pd.read_csv(self._filelist_path)
             if df.empty:
                 raise ValueError(
