@@ -93,9 +93,11 @@ fs.download_batch_from_hf(
 
 ### Basic Data Loading
 
+
 ```python
-from utils.fs import SeamlessInteractionFS
 from pathlib import Path
+from datasets import load_dataset
+from utils.fs import SeamlessInteractionFS
 
 fs = SeamlessInteractionFS()
 
@@ -109,11 +111,10 @@ fs.download_archive_from_hf(
     extract=False,
 )
 
-from datasets import load_dataset
-local_path = "/Users/yaoj/datasets/seamless_interaction/improvised/dev/0000/0023.tar"
-dataset_local = load_dataset("webdataset", data_files={"dev": local_path}, split="dev", streaming=True)
+local_path = Path.home() / "datasets/seamless_interaction/improvised/dev/0000/0023.tar"
+dataset = load_dataset("webdataset", data_files={"dev": local_path}, split="dev", streaming=True)
 
-for item in dataset_local:
+for item in dataset:
     break
 
 isinstance(item["mp4"], bytes)
@@ -125,6 +126,9 @@ item["json"].keys()
 item["wav"].keys()
 # dict_keys(['path', 'array', 'sampling_rate'])
 ```
+
+Check out the [dataloader_webdataset.py](./scripts/dataloader_webdataset.py) script for more details.
+
 
 ## 🔍 Description
 
