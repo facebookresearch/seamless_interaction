@@ -45,5 +45,5 @@ include = ["seamless_interaction*"]
 version = {attr = "seamless_interaction.__version__"}
 
 [project.urls]
-"Homepage" = "https://github.com/facebookresearch/seamless-interaction"
-"Bug Tracker" = "https://github.com/facebookresearch/seamless-interaction"
+"Homepage" = "https://github.com/facebookresearch/seamless_interaction"
+"Bug Tracker" = "https://github.com/facebookresearch/seamless_interaction"
