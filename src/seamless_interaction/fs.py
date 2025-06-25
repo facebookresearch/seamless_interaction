@@ -184,7 +184,7 @@ class SeamlessInteractionFS:
             repo_root_dir = (
                 os.getcwd().split("seamless_interaction")[0] + "seamless_interaction"
             )
-            filelist_path = f"{repo_root_dir}/filelists/metadata.csv"
+            filelist_path = f"{repo_root_dir}/assets/metadata.csv"
             df = pd.read_csv(filelist_path)
             if df.empty:
                 raise ValueError(
