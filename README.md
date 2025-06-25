@@ -2,7 +2,7 @@
 
 # Seamless Interaction Dataset
 
-<img src="https://raw.githubusercontent.com/facebookresearch/seamless_communication/refs/heads/main/23-11_SEAMLESS_BlogHero_11.17.jpg" alt="Seamless Interaction Dataset Banner" width="800px">
+<img src="./assets/banner.png" alt="Seamless Interaction Dataset Banner" width="800px">
 
 **A large-scale multimodal dataset of 4,000+ hours of human interactions for AI research**
 
