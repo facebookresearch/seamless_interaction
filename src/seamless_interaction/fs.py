@@ -1,8 +1,13 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 from __future__ import annotations
 
 import glob
 import json
-import logging
 import multiprocessing as mp
 import os
 import re
@@ -12,7 +17,7 @@ import tempfile
 from collections import defaultdict
 from functools import cache, partial
 from pathlib import Path
-from typing import Any, Final, Literal
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -20,76 +25,15 @@ import wget
 from huggingface_hub import HfApi, HfFileSystem, hf_hub_download
 from tqdm import tqdm
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("hf_fs.log"), logging.StreamHandler()],
+from seamless_interaction.constants import (
+    ALL_LABELS,
+    ALL_SPLITS,
+    ALL_FEATURES,
+    FILE_ID_REGEX,
 )
-logger = logging.getLogger(__name__)
+from seamless_interaction.utils import setup_logging, recursively_cast_to_float32
 
-
-ALL_LABELS: Final = ["improvised", "naturalistic"]
-ALL_SPLITS: Final = ["train", "dev", "test"]
-ALL_FEATURES: Final = {
-    "smplh": [  # npy
-        "body_pose",
-        "global_orient",
-        "is_valid",
-        "left_hand_pose",
-        "right_hand_pose",
-        "translation",
-    ],
-    "boxes_and_keypoints": [  # npy
-        "box",
-        "is_valid_box",
-        "keypoints",
-    ],
-    "movement": [  # npy
-        "EmotionArousalToken",
-        "emotion_valence",
-        "EmotionValenceToken",
-        "expression",
-        "FAUToken",
-        "frame_latent",
-        "FAUValue",
-        "gaze_encodings",
-        "alignment_head_rotation",
-        "head_encodings",
-        "alignment_translation",
-        "hypernet_features",
-        "emotion_arousal",
-        "is_valid",
-        "emotion_scores",
-    ],
-    "metadata": [  # json
-        "transcript",  # (optional)
-        "vad",  # (required)
-    ],
-    "annotations": [
-        "1P-IS",
-        "1P-R",
-        "3P-IS",
-        "3P-R",
-        "3P-V",
-    ],  # json (optional)
-}
-# Regular expression to parse file IDs from filenames
-FILE_ID_REGEX = r"V(\d+)_S(\d+)_I(\d+)_P(\d+)"
-
-
-def recursively_cast_to_float32(data: Any) -> Any:
-    if isinstance(data, np.ndarray):
-        if data.dtype == np.float64:
-            return data.astype(np.float32)
-        else:
-            return data
-    elif isinstance(data, list):
-        return [recursively_cast_to_float32(item) for item in data]
-    elif isinstance(data, dict):
-        return {k: recursively_cast_to_float32(v) for k, v in data.items()}
-    else:
-        return data  # Keep other types unchanged
+logger = setup_logging(__name__)
 
 
 class SeamlessInteractionFS:
@@ -326,7 +270,11 @@ class SeamlessInteractionFS:
         return size_in_gb
 
     def gather_file_id_data_from_s3(
-        self, file_id: str, *, num_workers: int | None = None
+        self,
+        file_id: str,
+        *,
+        num_workers: int | None = None,
+        local_dir: str | None = None,
     ) -> None:
         """
         Given a file ID, gather all the audio, video, annotations, metadata, and npy data from s3.
@@ -336,9 +284,12 @@ class SeamlessInteractionFS:
 
         :param file_id: The file ID to gather data for
         :param num_workers: Number of parallel workers to use
+        :param local_dir: Local directory to download to
         """
         if num_workers is None:
             num_workers = self._num_workers
+        if local_dir is None:
+            local_dir = self._local_dir
         files = self.get_path_list_for_file_id_s3(file_id)
         logger.info(f"Found {len(files)} files for {file_id}")
 
@@ -347,7 +298,7 @@ class SeamlessInteractionFS:
             ["label", "split", "batch_idx", "archive_idx"],
         ].values[0]
         target_path = os.path.join(
-            self._local_dir, label, split, f"{batch_idx:04d}", f"{archive_idx:04d}"
+            local_dir, label, split, f"{batch_idx:04d}", f"{archive_idx:04d}"
         )
         os.makedirs(target_path, exist_ok=True)
 
@@ -554,7 +505,7 @@ class SeamlessInteractionFS:
         self,
         label: str,
         split: str,
-        batch_idx: int,
+        batch_idx: int | list[int] | None = None,
         *,
         local_dir: str | None = None,
         num_workers: int | None = None,
@@ -567,7 +518,7 @@ class SeamlessInteractionFS:
 
         :param label: The label (improvised or naturalistic)
         :param split: The split (train, dev, test)
-        :param batch_idx: The batch index
+        :param batch_idx: The batch index or list of batch indices, or None to download all batches
         :param local_dir: Local directory to download to
         :param num_workers: Number of parallel workers
         :return: True if all downloads succeeded, False otherwise
@@ -587,6 +538,21 @@ class SeamlessInteractionFS:
         logger.info(
             f"Starting download of {len(archives)} archives from batch {batch_idx} using {num_workers} workers"
         )
+
+        if batch_idx is None:
+            batch_idx = self.list_batches(label, split)
+
+        if isinstance(batch_idx, list):
+            for batch in batch_idx:
+                self.download_batch_from_hf(
+                    label=label,
+                    split=split,
+                    batch_idx=batch,
+                    local_dir=local_dir,
+                    num_workers=num_workers,
+                    archive_list=archive_list,
+                )
+            return True
 
         success_count = 0
         if num_workers > 1:
@@ -712,8 +678,7 @@ class SeamlessInteractionFS:
     def download_batch_from_s3(
         self,
         batch: list[str],
-        local_dir: str = None,
-        overwrite: bool = False,
+        local_dir: str | None = None,
         num_workers: int | None = None,
     ) -> bool:
         """
@@ -725,7 +690,9 @@ class SeamlessInteractionFS:
             num_workers = self._num_workers
 
         for file in tqdm(batch, desc="Downloading files"):
-            self.gather_file_id_data_from_s3(file, num_workers=num_workers)
+            self.gather_file_id_data_from_s3(
+                file, num_workers=num_workers, local_dir=local_dir
+            )
         return True
 
     def partition_filelist(
