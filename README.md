@@ -6,7 +6,6 @@
 
 **A large-scale multimodal dataset of 4,000+ hours of human interactions for AI research**
 
-## Links
 [🖼️ Blog](https://ai.meta.com/blog/seamless-interaction-dataset-natural-conversation-dynamics) | [🌐 Website](https://ai.meta.com/research/seamless-interaction/) | [🎮 Demo](https://www.aidemos.meta.com/seamless_interaction_dataset) | [🤗 HuggingFace](https://huggingface.co/datasets/facebook/seamless-interaction) | [📄 Paper](#citation)
 
 </div>
