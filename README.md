@@ -28,48 +28,102 @@ The **Seamless Interaction Dataset** is a large-scale collection of over 4,000 h
 ### Installation
 
 ```bash
-# Install the package
-pip install seamless-interaction
+git clone https://github.com/facebookresearch/seamless-interaction
+cd seamless-interaction
 
-# Download a specific dataset version
-seamless-interaction download --subset 10GB  # Options: 10GB, 100GB, 1TB, full
+# if you use uv
+uv sync
+
+# Or install the development version
+pip install -e .
 ```
 
-### Basic Usage
+### Download Options
+
+We provide two download methods optimized for different use cases:
+
+#### 🔍 **S3 Download** - Fine-grained exploration
+Perfect for exploring individual interactions or specific file IDs. Downloads from S3 and automatically converts to consistent format (.wav, .mp4, .npz, .json).
 
 ```python
-# Import and load the dataset 
-from seamless_interaction import load_dataset
+from utils.fs import SeamlessInteractionFS
 
-# Load the train split with specific modalities
-dataset = load_dataset(
-    split="train", 
-    modalities=["audio", "video", "transcript", "movement"],
-    subset="10GB"  # Use the 10GB subset
+# Initialize the filesystem interface
+fs = SeamlessInteractionFS()
+
+# Download a specific interaction pair
+fs.gather_file_id_data_from_s3(
+    "V00_S0809_I00000582_P0947",
+    num_workers=4  # Accelerated with multiprocessing
 )
 
-# Iterate through examples
-for example in dataset:
-    print(f"Interaction ID: {example['id']}")
-    print(f"Duration: {example['duration']}s")
-    print(f"Transcript: {example['transcript'][:100]}...")
-    
-    # Access rich movement features
-    if 'movement' in example:
-        print(f"Emotion scores: {example['movement']['emotion_scores'].shape}")
+# Files are organized as:
+# local_dir/improvised/train/0000/0005/V00_S0809_I00000582_P0947.wav
+# local_dir/improvised/train/0000/0005/V00_S0809_I00000582_P0947.mp4  
+# local_dir/improvised/train/0000/0005/V00_S0809_I00000582_P0947.json
+# local_dir/improvised/train/0000/0005/V00_S0809_I00000582_P0947.npz
 ```
 
-### Using HuggingFace Datasets
+#### 📦 **HuggingFace Download** - Batch exploration  
+Ideal for downloading self-contained batches (~50GB each) for local exploration. Each batch contains complete interaction pairs.
 
 ```python
-# Alternatively, load directly from HuggingFace
+from utils.fs import SeamlessInteractionFS
+
+# Initialize the filesystem interface
+fs = SeamlessInteractionFS(num_workers=8)
+
+# Download specific archives from a batch (recommended for laptops)
+fs.download_batch_from_hf(
+    label="improvised",
+    split="dev", 
+    batch_idx=0,
+    archive_list=[0, 23],  # Download only specific archives
+    num_workers=8  # Parallel download and extraction
+)
+
+# Download entire batch (for larger workstations)
+fs.download_batch_from_hf(
+    label="improvised",
+    split="train", 
+    batch_idx=0,
+    num_workers=None  # auto-detect the number of workers
+)
+```
+
+### Basic Data Loading
+
+```python
+from utils.fs import SeamlessInteractionFS
+from pathlib import Path
+
+fs = SeamlessInteractionFS()
+
+fs.download_archive_from_hf(
+    idx=0,
+    archive=23,  # pick the archive idx number
+    label="improvised",  # "improvised" or "naturalistic"
+    split="dev",  # "dev", "test", "train"
+    batch=0,  # pick the batch idx number
+    local_dir=Path.home() / "datasets/seamless_interaction",
+    extract=False,
+)
+
 from datasets import load_dataset
+local_path = "/Users/yaoj/datasets/seamless_interaction/improvised/dev/0000/0023.tar"
+dataset_local = load_dataset("webdataset", data_files={"dev": local_path}, split="dev", streaming=True)
 
-# Load the 10GB sample from HuggingFace
-dataset = load_dataset("seamless/interaction", "10GB")
+for item in dataset_local:
+    break
 
-# Stream the dataset to avoid downloading everything at once
-dataset = load_dataset("seamless/interaction", "10GB", streaming=True)
+isinstance(item["mp4"], bytes)
+# True
+item["npz"].keys()
+# dict_keys(['boxes_and_keypoints:box', 'boxes_and_keypoints:is_valid_box', 'boxes_and_keypoints:keypoints', 'movement:EmotionArousalToken', 'movement:EmotionValenceToken', 'movement:FAUToken', 'movement:FAUValue', 'movement:alignment_head_rotation', 'movement:alignment_translation', 'movement:emotion_arousal', 'movement:emotion_scores', 'movement:emotion_valence', 'movement:expression', 'movement:frame_latent', 'movement:gaze_encodings', 'movement:head_encodings', 'movement:hypernet_features', 'movement:is_valid', 'smplh:body_pose', 'smplh:global_orient', 'smplh:is_valid', 'smplh:left_hand_pose', 'smplh:right_hand_pose', 'smplh:translation'])
+item["json"].keys()
+# dict_keys(['id', 'metadata:transcript', 'metadata:vad'])
+item["wav"].keys()
+# dict_keys(['path', 'array', 'sampling_rate'])
 ```
 
 ## 🔍 Description
@@ -83,40 +137,24 @@ The repository provides comprehensive tools for downloading, processing, and uti
 - **Raw and processed multimodal data**: Video, audio, transcripts, and annotations
 - **Precomputed features**: Motion capture, facial keypoints, voice activity detection
 - **Metadata**: Participant demographics, interaction contexts, and relationships
-- **Benchmark tasks**: Standardized evaluation protocols for various AI tasks
 
 ### 📂 Repository Structure
 
 ```
 seamless_interaction/
-├── data/                 # Main dataset directory
-│   ├── README.md         # Dataset-specific documentation
-│   ├── improvised/       # Interactions with guided prompts
-│   └── naturalistic/     # Spontaneous conversations
-├── sample/               # Sample datasets of different sizes
-│   ├── 10GB/             # Mini sample (100 interactions)
-│   ├── 100GB/            # Small sample (1,000 interactions)
-│   └── 1TB/              # Medium sample (10,000 interactions)
+├── filelist/              # Filelist for all the datapoints
+│   └── metadata.csv
 ├── scripts/              # Utility scripts for dataset processing
 │   ├── constants.py      # Dataset constants and configuration
 │   ├── errors.py         # Error handling utilities
 │   └── utils.py          # General utility functions
+├── utils/                # Utility functions for dataset processing
+│   ├── fs.py             # Filesystem interface for dataset access
+│   ├── fs_download.ipynb  # Notebook for downloading dataset
+│   └── fs_load.ipynb      # Notebook for loading dataset
 ├── LICENSE               # CC-BY-NC 4.0 license
 └── pyproject.toml        # Python package configuration
 ```
-
-### 🛠️ Utility Scripts
-
-The `scripts` directory contains utilities to help process and validate the dataset:
-
-- **constants.py**: Defines dataset paths, modality names, and configuration parameters
-- **errors.py**: Custom exceptions and error handling for data loading issues
-- **utils.py**: Helper functions for data processing, conversion, and visualization
-
-### 🧠 Imitator Model
-
-The repository also includes the Imitator model architecture, designed to [TBD]
-
 
 ## 📦 Deep Dive into the Dataset
 
@@ -215,9 +253,9 @@ The dataset includes several types of human annotations for rich behavioral anal
 | 3P-R | xxx | JSON |
 | 3P-V | xxx | JSON |
 
-#### Movement Feature Types
+#### Movement/Imitator Feature Types
 
-The movement directory contains rich behavioral features:
+The movement directory contains rich behavioral features (output of the Imitator model):
 
 | Feature | Description | Format |
 |---------|-------------|--------|
@@ -236,48 +274,69 @@ The movement directory contains rich behavioral features:
 
 
 
-### Dataset Versions
+### Download Strategy Guide
 
-We provide multiple versions of the dataset to accommodate different research needs and computational constraints:
+We provide two complementary download methods optimized for different research workflows:
 
-| Version | Size | Samples | Modalities | Description |
-|---------|------|---------|------------|-------------|
-| Mini | 10GB | 100 | All | Quick experimentation and API testing |
-| Small | 100GB | 1,000 | All | Algorithm development and prototyping |
-| Medium | 1TB | 10,000 | All | Serious model training and validation |
-| Full | 50TB | 100,000+ | All | State-of-the-art research and benchmarking |
+| Method | Use Case | Best For | Download Size | Parallelization |
+|--------|----------|----------|---------------|-----------------|
+| **S3 Direct** | Fine-grained exploration | Individual interactions, interaction pairs | Per file (~100MB) | ✅ Multiprocessing |
+| **HuggingFace Batches** | Batch processing | Local dataset exploration, model training | ~50GB per batch | ✅ Multiprocessing |
 
-Sample datasets are available in the `/sample` directory with three pre-configured sizes:
-- `/sample/10GB`: Mini version with essential samples
-- `/sample/100GB`: Small version with broader coverage
-- `/sample/1TB`: Medium version with comprehensive samples
+#### When to Use S3 Download
+- **Qualitative analysis**: Examining specific interactions in detail
+- **Pair studies**: Analyzing conversational dynamics between participants  
+- **Feature exploration**: Understanding data structure before large downloads
+- **Development**: Testing code with minimal data
 
-You can download any version from HuggingFace or our public FAIR S3 bucket using:
+#### When to Use HuggingFace Download
+- **Model training**: Need substantial training data
+- **Batch processing**: Analyzing patterns across many interactions
+- **Local exploration**: Want self-contained dataset on laptop/workstation
+- **Reproducible research**: Ensure consistent data splits
 
-```bash
-# Download the full dataset (requires ~50TB storage)
-seamless-interaction download --version full --output-dir /path/to/storage
+#### Performance Optimization
 
-# Or use the streaming API to access without downloading
-seamless-interaction stream --version 10GB --cache-dir /tmp/seamless-cache
+```python
+# Optimal settings for different systems
+fs_laptop = SeamlessInteractionFS(num_workers=4)      # Laptop/small workstation
+fs_workstation = SeamlessInteractionFS(num_workers=8) # High-end workstation  
+fs_server = SeamlessInteractionFS(num_workers=16)     # Server/cluster node
+
+# Memory-efficient batch processing
+for batch_idx in range(10):  # Process in chunks
+    fs.download_batch_from_hf("improvised", "train", batch_idx, num_workers=8)
+    # Process batch here...
+    # Delete batch to free space if needed
 ```
 
-### Imitator Encoder Architecture
+### Dataset Versions
 
-The Imitator Encoder is a transformer-based model that processes multimodal input sequences to generate unified representations of human interaction behaviors:
+The dataset is organized in self-contained batches for flexible exploration:
 
-<div align="center">
-<img src="https://balamuruganthambiraja.github.io/Imitator/media/img/teaser.png" alt="Imitator Encoder Architecture" width="600px">
-</div>
+| Split | Batches | Size per Batch | Total Size | Description |
+|-------|---------|----------------|------------|-------------|
+| **dev** | 5 | ~50GB | ~250GB | Development/validation set |
+| **test** | 10 | ~50GB | ~500GB | Hold-out test set |  
+| **train** | 200+ | ~50GB | ~10TB+ | Full training data |
 
-The encoder processes audio, visual, and textual inputs through specialized encoders before fusing them in a joint multimodal transformer. This architecture enables:
+#### Recommended Download Strategies
 
-- Cross-modal alignment of behavioral signals
-- Temporal modeling of interaction dynamics
-- Transfer learning between different interaction contexts
-- Generation of coherent multimodal behavior
+```python
+# Strategy 1: Quick Start (Laptop-friendly)
+fs = SeamlessInteractionFS(num_workers=4)
+fs.download_batch_from_hf("improvised", "dev", 0, archive_list=[0, 1, 2])  # ~6GB
 
-The Imitator model leverages our extensive movement features (FAU, emotion, gaze, etc.) alongside speech and language understanding to create comprehensive behavior models that can understand and predict natural human interactions.
+# Strategy 2: Research Dataset (Workstation)  
+fs = SeamlessInteractionFS(num_workers=8)
+fs.download_batch_from_hf("improvised", "dev", 0)     # Full dev set ~50GB
+fs.download_batch_from_hf("naturalistic", "dev", 0)   # Both interaction types
+
+# Strategy 3: Production Training (Server/Cluster)
+fs = SeamlessInteractionFS(num_workers=16)
+for batch_idx in range(20):  # First 20 training batches (~1TB)
+    fs.download_batch_from_hf("improvised", "train", batch_idx)
+```
 
 #### File Format Specifications
 
@@ -315,38 +374,150 @@ The Seamless Interaction Dataset enables research across multiple domains:
 - Synthesize conversational dynamics for virtual production
 - Create training data for digital human technologies
 
-## 🛠️ Tools and Examples
+## 🛠️ Tools and Download Scripts
 
-We provide several tools to help researchers work with the dataset:
+### Ready-to-use Download Scripts
 
+We provide example scripts for common download scenarios:
+
+#### S3 Individual File Download
 ```python
-# Extract behavioral features from raw data
-from seamless_interaction.features import extract_features
+# scripts/download_s3.py
+from utils.fs import SeamlessInteractionFS
 
-# Generate synthetic behaviors with the Imitator model
-from seamless_interaction.models import ImitatorModel
+def main():
+    fs = SeamlessInteractionFS()
+    # Download specific interaction with multiprocessing acceleration
+    fs.gather_file_id_data_from_s3("V00_S0809_I00000582_P0947")
 
-# Working with the dataset structure
-from seamless_interaction import SeamlessDataset
-
-# Load a specific interaction by ID
-dataset = SeamlessDataset("path/to/data", split="train")
-interaction = dataset.get_interaction("V03_S0846_I00000285")
-
-# Access synchronized modalities
-video = interaction.video
-audio = interaction.audio
-transcript = interaction.transcript
-facial_features = interaction.movement.expression
-emotions = interaction.movement.emotion_scores
-
+if __name__ == "__main__":
+    main()
 ```
 
-Check out our [example notebooks](https://github.com/facebookresearch/seamless-interaction/tree/main/examples) for more detailed examples, including:
+#### HuggingFace Batch Download  
+```python
+# scripts/download_hf.py
+from utils.fs import SeamlessInteractionFS
 
-- Basic data loading and visualization
+def main():
+    fs = SeamlessInteractionFS()
+    # Download selected archives from batch 0 with 10 parallel workers
+    fs.download_batch_from_hf(
+        "improvised", "dev", 0, 
+        num_workers=10, 
+        archive_list=[0, 23]  # ~2GB for quick exploration
+    )
+
+if __name__ == "__main__":
+    main()
+```
+
+### Advanced Usage Examples
+
+```python
+from utils.fs import SeamlessInteractionFS
+import numpy as np
+import json
+
+# Initialize with custom settings
+fs = SeamlessInteractionFS(
+    local_dir="/path/to/your/data",
+    num_workers=8,  # Adjust based on your system
+)
+
+# Download multiple file IDs efficiently
+file_ids = ["V00_S0809_I00000582_P0947", "V00_S0809_I00000582_P0948"]
+for file_id in file_ids:
+    fs.gather_file_id_data_from_s3(file_id, num_workers=4)
+
+# List available batches and archives
+batches = fs.list_batches("improvised", "train")
+print(f"Available batches: {batches[:5]}...")  # First 5 batches
+
+archives = fs.list_archives("improvised", "train", 0)
+print(f"Archives in batch 0: {archives}")
+
+# Check archive sizes before downloading
+for archive in archives[:3]:
+    size_gb = fs.get_tar_archive_size("improvised", "train", 0, archive)
+    print(f"Archive {archive}: {size_gb:.2f} GB")
+
+# Download with progress tracking
+fs.download_batch_from_hf(
+    label="naturalistic",
+    split="dev", 
+    batch_idx=1,
+    num_workers=6
+)
+```
+
+### Working with Downloaded Data
+
+```python
+# Load interaction data
+def load_interaction_data(file_id):
+    """Load all modalities for a given file ID."""
+    import cv2
+    import librosa
+    
+    fs = SeamlessInteractionFS()
+    paths = fs.get_path_list_for_file_id_local(file_id)
+    
+    data = {}
+    for path in paths:
+        if path.endswith('.mp4'):
+            data['video'] = cv2.VideoCapture(path)
+        elif path.endswith('.wav'):
+            data['audio'], data['sample_rate'] = librosa.load(path, sr=48000)
+        elif path.endswith('.json'):
+            with open(path) as f:
+                data['metadata'] = json.load(f)
+        elif path.endswith('.npz'):
+            data['features'] = np.load(path)
+    
+    return data
+
+# Example usage
+interaction = load_interaction_data("V00_S0809_I00000582_P0947")
+print(f"Available feature keys: {list(interaction['features'].keys())}")
+print(f"Emotion data shape: {interaction['features']['movement:emotion_scores'].shape}")
+```
+
+### Batch Processing for Research
+
+```python
+# Process entire datasets efficiently
+def download_research_subset():
+    """Download a research-friendly subset."""
+    fs = SeamlessInteractionFS(num_workers=8)
+    
+    # Download development sets for both categories (manageable size)
+    fs.download_batch_from_hf("improvised", "dev", 0)
+    fs.download_batch_from_hf("naturalistic", "dev", 0) 
+    
+    # Download first few batches of training data
+    for batch_idx in range(3):  # ~150GB total
+        fs.download_batch_from_hf("improvised", "train", batch_idx)
+
+# Download specific interaction pairs for qualitative analysis
+def download_interaction_pairs():
+    """Download matching participant pairs.""" 
+    fs = SeamlessInteractionFS()
+    
+    # Example: Download both participants from same interaction
+    pair_ids = [
+        "V00_S0809_I00000582_P0947",  # Participant A
+        "V00_S0809_I00000582_P0948",  # Participant B  
+    ]
+    
+    for file_id in pair_ids:
+        fs.gather_file_id_data_from_s3(file_id, num_workers=4)
+```
+
+Check out our additional examples for:
+- Basic data loading and visualization  
 - Multimodal feature extraction
-- Generating synthetic interactions with the Imitator model
+- Cross-modal analysis techniques
 
 ## ⚠️ Known Limitations and Noise in Metadata
 
