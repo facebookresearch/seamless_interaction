@@ -1,19 +1,48 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "seamless-interaction"
 version = "0.1.0"
-description = "Add your description here"
+description = "Library for seamless interaction dataset"
+authors = [
+    {name = "FAIR"}
+]
 readme = "README.md"
 requires-python = ">=3.10"
+license = {file = "LICENSE"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
 dependencies = [
+    "boto3>=1.38.27",
     "datasets>=3.6.0",
     "fairseq2==0.4.5",
     "fsspec>=2025.3.0",
     "jupyterlab>=4.4.3",
+    "librosa>=0.11.0",
     "numpy==1.23",
+    "opencv-python>=4.7.0.72",
+    "pandas>=1.5.1",
+    "plotly>=6.1.2",
     "pylance>=0.29.0",
     "ruff>=0.12.0",
-    "s3fs>=2025.3.0",
+    "s3fs==0.4.2",
+    "streamlit>=1.46.0",
     "torch==2.6.0",
     "torchaudio==2.6.0",
     "webdataset>=1.0.2",
+    "wget>=3.2",
 ]
+
+[project.urls]
+"Homepage" = "https://github.com/facebookresearch/seamless-interaction"
+"Bug Tracker" = "https://github.com/facebookresearch/seamless-interaction"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["utils*", "scripts*"]
+exclude = ["data*", "notebooks*"]
