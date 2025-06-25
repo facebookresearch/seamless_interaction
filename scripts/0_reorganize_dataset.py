@@ -144,6 +144,8 @@ def gather_file(fs: SeamlessInteractionFS, file_id: str, batch_idx: int, target_
 
 def process_batch(batch_idx: int, batch: list[str], fs: SeamlessInteractionFS, target_dir: str, batch_start: int = 0) -> list[str]:
     """Process a batch of files"""
+    if batch_idx < batch_start:
+        return []
     logger.info(f"Processing batch {batch_idx + 1} with {len(batch)} files")
     processed_files = []
     

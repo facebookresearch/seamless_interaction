@@ -124,7 +124,7 @@ def main():
     label, split = args.label, args.split
     max_processes = args.max_processes
     data_dir_root = "/checkpoint/seamless/yaoj/data/seamless_interaction_webdataset_raw"
-    target_dir = f"/checkpoint/seamless/yaoj/data/seamless_interaction_webdataset_sharded_tar_0623_{split}"
+    target_dir = f"/checkpoint/seamless_fs2/yaoj/data/seamless_interaction_webdataset_sharded_tar_0623_{split}"
     input_dirs = glob(f"{data_dir_root}/{label}-{split}-*")
     batches = [int(f.split("-")[-1]) for f in input_dirs]
     batch_end = args.batch_end if args.batch_end != -1 else max(batches) + 1
