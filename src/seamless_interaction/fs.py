@@ -986,11 +986,12 @@ class SeamlessInteractionFS:
                         shared_json_data[f"metadata:{metadata_type}"] = lines
 
             elif filename.endswith(".json"):
-                # Process JSON annotations
+                # These annotation files are actually multi-line JSON (JSONL)
                 if not self._dry_run:
                     with open(tmp_file_path, "r") as f:
-                        data = json.load(f)
-
+                        # Load line-by-line — each line is a JSON object
+                        data = [json.loads(line) for line in f if line.strip()]
+                    
                     # Extract annotation type from path
                     path_parts = url.split("/")
                     annotation_type = path_parts[-2]  # e.g., "1P-IS"
