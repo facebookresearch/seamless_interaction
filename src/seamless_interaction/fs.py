@@ -966,7 +966,15 @@ class SeamlessInteractionFS:
             elif filename.endswith(".npy"):
                 # Load and store numpy data
                 if not self._dry_run:
-                    data = np.load(tmp_file_path)
+                    data = np.load(tmp_file_path, allow_pickle=True)
+                    if data.dtype == object and data.shape == ():
+                        data = data.item()
+                        if data is None:
+                            logger.info(
+                                "Skipping empty optional file "
+                                f"{'/'.join(url.split('/')[-3:])}"
+                            )
+                            return
                     data = recursively_cast_to_float32(data)
                     # Extract feature name from path
                     path_parts = url.split("/")
@@ -994,7 +1002,16 @@ class SeamlessInteractionFS:
                 # Process JSON annotations
                 if not self._dry_run:
                     with open(tmp_file_path, "r") as f:
-                        data = json.load(f)
+                        content = f.read()
+                    try:
+                        data = json.loads(content)
+                    except json.JSONDecodeError:
+                        # Annotation files carry a .json suffix but are JSONL
+                        data = [
+                            json.loads(line)
+                            for line in content.splitlines()
+                            if line.strip()
+                        ]
 
                     # Extract annotation type from path
                     path_parts = url.split("/")
